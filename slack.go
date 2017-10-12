@@ -5,12 +5,12 @@ import (
 	"github.com/nlopes/slack"
 	"strings"
 	"./event"
+	"os"
 )
 
 func main() {
-	api := slack.New("xoxb-254640230626-5ZzF6u7RWofvNFk3qQfPnqqC")
-	//token := os.Getenv("SLACK_TOKEN")
-	//api := slack.New(token)
+	token := os.Getenv("SLACK_TOKEN")
+	api := slack.New(token)
 	rtm := api.NewRTM()
 	go rtm.ManageConnection()
 
@@ -81,7 +81,7 @@ func respond(rtm *slack.RTM, msg *slack.MessageEvent, prefix string) {
 	} else if randomResponses[text] != "" {
 		rtm.SendMessage(rtm.NewOutgoingMessage(randomResponses[text], msg.Channel))
 	} else {
-		response = event.Get_random_quote()
-		rtm.SendMessage(rtm.NewOutgoingMessage(response, msg.Channel))
+		author, quote := event.Get_random_quote()
+		rtm.SendMessage(rtm.NewOutgoingMessage(quote + "\n\n - _" + author + "_", msg.Channel))
 	}
 }

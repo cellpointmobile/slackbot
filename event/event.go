@@ -7,6 +7,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"log"
 	"math/rand"
+	"time"
 )
 
 const IFTTT_BASE_URL = "https://maker.ifttt.com/trigger"
@@ -21,18 +22,33 @@ func Power_off() {
 	http.Get(IFTTT_BASE_URL + "/power_off/with/key/" + os.Getenv("IFTTT_TOKEN") )
 }
 
-func Get_random_quote() string {
-	doc, err := goquery.NewDocument("https://www.brainyquote.com/quotes/keywords/coffee.html")
-	if err != nil {
-		log.Fatalln(err)
+func Get_random_quote() (author string, quote string) {
+	urls := []string{
+		"https://www.brainyquote.com/quotes/keywords/coffee.html",
+		"https://www.brainyquote.com/quotes/keywords/coffee_2.html?vm=l",
+		"https://www.brainyquote.com/quotes/keywords/coffee_3.html?vm=l",
+		"https://www.brainyquote.com/quotes/keywords/coffee_4.html?vm=l",
 	}
 
-	quotes := []string{}
+	quotes := map[string]string{}
+	authors := []string{}
 
-	doc.Find(".b-qt").Each(func(i int, sel *goquery.Selection) {
-		quotes = append(quotes, sel.Text())
-	})
+	for _, url := range urls {
+		doc, err := goquery.NewDocument(url)
 
-	n := rand.Int() % len(quotes)
-	return quotes[n]
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		doc.Find(".bq_list_i").Each(func(i int, sel *goquery.Selection) {
+			quote := sel.Find(".b-qt").Text()
+			author := sel.Find(".bq-aut").Text()
+			authors = append(authors, author)
+			quotes[author] = quote
+		})
+	}
+
+	rand.Seed(time.Now().Unix())
+	n := rand.Int() % len(authors)
+	return authors[n], quotes[authors[n]]
 }
