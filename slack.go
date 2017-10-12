@@ -5,12 +5,12 @@ import (
 	"github.com/nlopes/slack"
 	"strings"
 	"./event"
-	"os"
 )
 
 func main() {
-	token := os.Getenv("SLACK_TOKEN")
-	api := slack.New(token)
+	api := slack.New("xoxb-254640230626-5ZzF6u7RWofvNFk3qQfPnqqC")
+	//token := os.Getenv("SLACK_TOKEN")
+	//api := slack.New(token)
 	rtm := api.NewRTM()
 	go rtm.ManageConnection()
 
@@ -55,14 +55,19 @@ func respond(rtm *slack.RTM, msg *slack.MessageEvent, prefix string) {
 
 	turnStuffOn := map[string]bool{
 		"coffee aye?": true,
-		"COFFEE NOW!":       true,
-		"I'm dying here":         true,
+		"coffee now!":       true,
+		"i'm dying here":         true,
 		"on": true,
 	}
 	turnStuffOff := map[string]bool{
 		"please stop": true,
 		"ditch the black liquid":     true,
 		"off":   true,
+	}
+
+	randomResponses := map[string]string{
+		"die!": "Never!",
+		"milk?": "Ask <@U1JCMNPHC> to go get it..",
 	}
 
 	if turnStuffOn[text] {
@@ -73,5 +78,10 @@ func respond(rtm *slack.RTM, msg *slack.MessageEvent, prefix string) {
 		response = "Terminating coffee supplies!"
 		rtm.SendMessage(rtm.NewOutgoingMessage(response, msg.Channel))
 		event.Power_off()
+	} else if randomResponses[text] != "" {
+		rtm.SendMessage(rtm.NewOutgoingMessage(randomResponses[text], msg.Channel))
+	} else {
+		response = event.Get_random_quote()
+		rtm.SendMessage(rtm.NewOutgoingMessage(response, msg.Channel))
 	}
 }
