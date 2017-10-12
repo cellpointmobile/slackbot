@@ -5,6 +5,7 @@ import (
 	"github.com/nlopes/slack"
 	"strings"
 	"./event"
+	"./power"
 	"os"
 )
 
@@ -70,14 +71,16 @@ func respond(rtm *slack.RTM, msg *slack.MessageEvent, prefix string) {
 		"milk?": "Ask <@U1JCMNPHC> to go get it..",
 	}
 
+	impl := new (power.HNAP)
+
 	if turnStuffOn[text] {
 		response = "okay okay, relax dude.."
 		rtm.SendMessage(rtm.NewOutgoingMessage(response, msg.Channel))
-		event.Power_on()
+		impl.On()
 	} else if turnStuffOff[text] {
 		response = "Terminating coffee supplies!"
 		rtm.SendMessage(rtm.NewOutgoingMessage(response, msg.Channel))
-		event.Power_off()
+		impl.Off()
 	} else if randomResponses[text] != "" {
 		rtm.SendMessage(rtm.NewOutgoingMessage(randomResponses[text], msg.Channel))
 	} else {
