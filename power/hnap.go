@@ -20,7 +20,7 @@ func (control HNAP) Off()  {
 }
 
 func (control HNAP) State() bool {
-	fmt.Println("HNAP consumption event fired")
+	fmt.Println("HNAP state event fired")
 	return hnap.State()
 }
 
