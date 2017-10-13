@@ -86,19 +86,22 @@ func brew_coffee(rtm *slack.RTM, msg *slack.MessageEvent) {
 	var response string
 	impl := new (power.HNAP)
 	impl.On()
+	time.Sleep(3 * time.Second)
 
 	Loop:
 		for {
 			if impl.Consumption() >= 100 {
 				response = "Still brewing.."
 			} else {
-				response = "Brew completed!"
+				response = "Brew completed! :coffee::tada:"
 				break Loop
 			}
 			log.Debug("Sending message: " + response + " to channel: " + msg.Channel)
 			rtm.SendMessage(rtm.NewOutgoingMessage(response, msg.Channel))
 			time.Sleep(30 * time.Second)
 		}
+
+	rtm.SendMessage(rtm.NewOutgoingMessage(response, msg.Channel))
 }
 
 func respond(rtm *slack.RTM, msg *slack.MessageEvent, prefix string) {
@@ -128,9 +131,9 @@ func respond(rtm *slack.RTM, msg *slack.MessageEvent, prefix string) {
 	impl := new (power.HNAP)
 
 	if turnStuffOn[text] {
-		brew_coffee(rtm, msg)
 		response := "okay okay, relax dude.."
 		rtm.SendMessage(rtm.NewOutgoingMessage(response, msg.Channel))
+		go brew_coffee(rtm, msg)
 	} else if turnStuffOff[text] {
 		response = "Terminating coffee supplies!"
 		rtm.SendMessage(rtm.NewOutgoingMessage(response, msg.Channel))
