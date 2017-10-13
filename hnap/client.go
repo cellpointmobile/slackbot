@@ -10,10 +10,15 @@ import (
 	"time"
 	"encoding/hex"
 	"strconv"
+	"sync"
+	"fmt"
 )
 
 const HNAP1_XMLNS = "http://purenetworks.com/HNAP1/";
 const HNAP_LOGIN_METHOD = "Login";
+
+var credentials HNAPCredentials;
+var loginMutex sync.Mutex
 
 func hnapAddress() string {
 	return os.Getenv("HNAP_ADDRESS")
@@ -37,20 +42,35 @@ type HNAPCredentials struct {
 
 
 func login() HNAPCredentials {
-	resp1 := request(HNAP_LOGIN_METHOD, requestBody(HNAP_LOGIN_METHOD, loginRequest1), HNAPCredentials{})
 
-	credentials := HNAPCredentials {
-		challenge: resp1.Find("Challenge").Text(),
-		cookie: resp1.Find("Cookie").Text(),
-		publicKey: resp1.Find("PublicKey").Text()}
+	loginMutex.Lock()
+	if (len(credentials.challenge) < 1) {
+		fmt.Println("Executing HNAP login procedure")
 
-	credentials.privateKey = hmacGenerate(credentials.publicKey + hnapPass(), credentials.challenge)
+		resp1 := request(HNAP_LOGIN_METHOD, requestBody(HNAP_LOGIN_METHOD, loginRequest1), HNAPCredentials{})
 
-	request(HNAP_LOGIN_METHOD, requestBody(HNAP_LOGIN_METHOD, func() string {
-		return loginRequest2(credentials.privateKey, credentials.challenge)
-	}), credentials)
+		cred := HNAPCredentials {
+			challenge: resp1.Find("Challenge").Text(),
+			cookie: resp1.Find("Cookie").Text(),
+			publicKey: resp1.Find("PublicKey").Text()}
+
+		cred.privateKey = hmacGenerate(cred.publicKey + hnapPass(), cred.challenge)
+
+		request(HNAP_LOGIN_METHOD, requestBody(HNAP_LOGIN_METHOD, func() string {
+			return loginRequest2(cred.privateKey, cred.challenge)
+		}), cred)
+
+		credentials = cred
+	}
+	loginMutex.Unlock()
 
 	return credentials
+}
+
+func logout() {
+	loginMutex.Lock()
+	credentials = HNAPCredentials{}
+	loginMutex.Unlock()
 }
 
 func getHnapAuth(soapAction string, privateKey string) string {
