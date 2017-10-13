@@ -11,14 +11,18 @@ import (
 	"encoding/hex"
 	"strconv"
 	"sync"
-	"fmt"
+	"github.com/op/go-logging"
+	"net/http/httputil"
 )
 
 const HNAP1_XMLNS = "http://purenetworks.com/HNAP1/";
 const HNAP_LOGIN_METHOD = "Login";
 
-var credentials HNAPCredentials;
-var loginMutex sync.Mutex
+var (
+	credentials HNAPCredentials
+	loginMutex sync.Mutex
+	log = logging.MustGetLogger("")
+)
 
 func hnapAddress() string {
 	return os.Getenv("HNAP_ADDRESS")
@@ -40,12 +44,20 @@ type HNAPCredentials struct {
 	privateKey string
 }
 
+func (c HNAPCredentials) String() string {
+	return "{ challenge: " + c.challenge + "\n" +
+		   "cookie: " + c.cookie + "\n" +
+		   "publicKey: " + c.publicKey + "\n" +
+		   "privateKey: " + c.privateKey + " }\n"
+}
+
 
 func login() HNAPCredentials {
 
 	loginMutex.Lock()
 	if (len(credentials.challenge) < 1) {
-		fmt.Println("Executing HNAP login procedure")
+		log.Debug("No login credentials exists")
+		log.Info("Executing HNAP login procedure")
 
 		resp1 := request(HNAP_LOGIN_METHOD, requestBody(HNAP_LOGIN_METHOD, loginRequest1), HNAPCredentials{})
 
@@ -61,7 +73,10 @@ func login() HNAPCredentials {
 		}), cred)
 
 		credentials = cred
+	} else {
+		log.Debug("Existing login credentials found")
 	}
+	log.Debug("Returning login credentials: " + credentials.String() )
 	loginMutex.Unlock()
 
 	return credentials
@@ -137,7 +152,17 @@ func request(soapAction string, soapBody string, credentials HNAPCredentials) (d
 		req.Header.Add("Cookie", "uid=" + credentials.cookie)
 	}
 
+	if (log.IsEnabledFor(logging.DEBUG) ) {
+		dump, _ := httputil.DumpRequest(req, true)
+		log.Debug("Request: " + string(dump) + "\n\n")
+	}
+
 	resp, _ := client.Do(req)
+
+	if (log.IsEnabledFor(logging.DEBUG) ) {
+		dump, _ := httputil.DumpResponse(resp, true)
+		log.Debug("Response: " + string(dump) + "\n\n")
+	}
 
 	document, _ = goquery.NewDocumentFromReader(resp.Body)
 	resp.Body.Close()

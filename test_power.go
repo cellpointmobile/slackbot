@@ -5,9 +5,19 @@ import (
 	"./power"
 	"fmt"
 	"strconv"
+	"github.com/op/go-logging"
+	"./botlogging"
 )
 
 func main() {
+
+	level, err := logging.LogLevel(os.Getenv("LOG_LEVEL") )
+	if err == nil {
+		botlogging.SetupLogging(level)
+	} else {
+		botlogging.SetupLogging(logging.WARNING)
+	}
+
 	execute(os.Args[1])
 }
 
