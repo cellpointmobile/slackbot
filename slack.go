@@ -175,7 +175,7 @@ func respond(rtm *slack.RTM, msg *slack.MessageEvent, prefix string) {
 		} else if (impl.Consumption() >= 100) {
 			response = inProgressMsg[rand.Intn(4)]
 		} else {
-			response = "Pffff.. Yesterdays news ya landlobber! How about drinking what's already in da pot?!"
+			response = "Pffff.. Yesterdays news ya landlobber! How 'bout sloppin' what's already on da pot?!"
 		}
 		rtm.SendMessage(rtm.NewOutgoingMessage(response, msg.Channel))
 
