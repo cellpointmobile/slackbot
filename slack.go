@@ -7,10 +7,20 @@ import (
 	"./event"
 	"./power"
 	"os"
+	"strconv"
+	"time"
 )
 
 func main() {
 	token := os.Getenv("SLACK_TOKEN")
+	if os.Getenv("SLACK_CHANNEL") == "" {
+		os.Setenv("SLACK_CHANNEL", "#hackerdaysdk")
+	}
+	go coffee_thread()
+	slack_thread(token)
+}
+
+func slack_thread(token string) {
 	api := slack.New(token)
 	rtm := api.NewRTM()
 	go rtm.ManageConnection()
@@ -47,6 +57,37 @@ Loop:
 	}
 }
 
+func coffee_thread() {
+	// get initial status
+	impl := new (power.HNAP)
+	state := impl.State()
+
+	for {
+		time.Sleep(3 * time.Second)
+		if state != impl.State() {
+			fmt.Print("State changed to: " + strconv.FormatBool(impl.State()))
+		}
+	}
+}
+
+func brew_coffee(rtm *slack.RTM, msg *slack.MessageEvent) {
+	var response string
+	impl := new (power.HNAP)
+	impl.On()
+
+	Loop:
+		for {
+			if impl.Consumption() >= 100 {
+				response = "Still brewing.."
+			} else {
+				response = "Brew completed!"
+				break Loop
+			}
+			rtm.SendMessage(rtm.NewOutgoingMessage(response, msg.Channel))
+			time.Sleep(30 * time.Second)
+		}
+}
+
 func respond(rtm *slack.RTM, msg *slack.MessageEvent, prefix string) {
 	var response string
 	text := msg.Text
@@ -56,14 +97,14 @@ func respond(rtm *slack.RTM, msg *slack.MessageEvent, prefix string) {
 
 	turnStuffOn := map[string]bool{
 		"coffee aye?": true,
-		"coffee now!":       true,
-		"i'm dying here":         true,
+		"coffee now!": true,
+		"i'm dying here": true,
 		"on": true,
 	}
 	turnStuffOff := map[string]bool{
 		"please stop": true,
-		"ditch the black liquid":     true,
-		"off":   true,
+		"ditch the black liquid": true,
+		"off": true,
 	}
 
 	randomResponses := map[string]string{
@@ -74,13 +115,20 @@ func respond(rtm *slack.RTM, msg *slack.MessageEvent, prefix string) {
 	impl := new (power.HNAP)
 
 	if turnStuffOn[text] {
-		response = "okay okay, relax dude.."
+		brew_coffee(rtm, msg)
+		response := "okay okay, relax dude.."
 		rtm.SendMessage(rtm.NewOutgoingMessage(response, msg.Channel))
-		impl.On()
 	} else if turnStuffOff[text] {
 		response = "Terminating coffee supplies!"
 		rtm.SendMessage(rtm.NewOutgoingMessage(response, msg.Channel))
 		impl.Off()
+	} else if randomResponses[text] != "juice usage?" {
+		energy := impl.Consumption()
+		juice := "Could not read juice level :("
+		if energy >= 0 {
+			juice = strconv.FormatFloat(energy, 'f', 2, 64) + " watts"
+		}
+		rtm.SendMessage(rtm.NewOutgoingMessage(juice, msg.Channel))
 	} else if randomResponses[text] != "" {
 		rtm.SendMessage(rtm.NewOutgoingMessage(randomResponses[text], msg.Channel))
 	} else {
