@@ -112,7 +112,7 @@ func coffee_thread() {
 	}
 }
 
-func brew_coffee(rtm *slack.RTM, msg *slack.MessageEvent) {
+func brew_coffee(msg *slack.MessageEvent) {
 	var response string
 	impl := new (power.HNAP)
 
@@ -132,10 +132,10 @@ func brew_coffee(rtm *slack.RTM, msg *slack.MessageEvent) {
 				break Loop
 			}
 			log.Debug("Sending message: " + response + " to channel: " + msg.Channel)
-			rtm.SendMessage(rtm.NewOutgoingMessage(response, msg.Channel))
+			send(response, msg.Channel, "")
 		}
 
-	rtm.SendMessage(rtm.NewOutgoingMessage(response, msg.Channel))
+	send(response, msg.Channel, msg.User)
 }
 
 func respond(rtm *slack.RTM, msg *slack.MessageEvent, prefix string) {
@@ -171,34 +171,42 @@ func respond(rtm *slack.RTM, msg *slack.MessageEvent, prefix string) {
 		response := ""
 		if state == false {
 			response = "okay okay, relax dude.."
-			go brew_coffee(rtm, msg)
+			go brew_coffee(msg)
 		} else if (impl.Consumption() >= 100) {
 			response = inProgressMsg[rand.Intn(4)]
 		} else {
 			response = "Pffff.. Yesterdays news ya landlobber! How 'bout sloppin' what's already on da pot?!"
 		}
-		rtm.SendMessage(rtm.NewOutgoingMessage(response, msg.Channel))
+		send(response, msg.Channel, msg.User)
 
 	} else if turnStuffOff[text] {
 		response = "Terminating coffee supplies!"
-		rtm.SendMessage(rtm.NewOutgoingMessage(response, msg.Channel))
+		send(response, msg.Channel, msg.User)
 
 		stateMutex.Lock()
 			impl.Off()
 		state = false
 		stateMutex.Unlock()
 
-	} else if randomResponses[text] != "juice usage?" {
+	} else if randomResponses[text] == "juice usage?" {
 		energy := impl.Consumption()
 		juice := "Could not read juice level :pensive:"
 		if energy >= 0 {
 			juice = strconv.FormatFloat(energy, 'f', 2, 64) + " watts"
 		}
-		rtm.SendMessage(rtm.NewOutgoingMessage(juice, msg.Channel))
+		send(juice, channel, msg.User)
 	} else if randomResponses[text] != "" {
-		rtm.SendMessage(rtm.NewOutgoingMessage(randomResponses[text], msg.Channel))
+		send(randomResponses[text], msg.Channel, msg.User)
 	} else {
 		author, quote := event.Get_random_quote()
-		rtm.SendMessage(rtm.NewOutgoingMessage(quote + "\n\n - _" + author + "_", msg.Channel))
+		send(quote + "\n\n - _" + author + "_", msg.Channel, msg.User)
 	}
+}
+
+func send(msg string, channel string, user string) {
+	if (len(user) > 0) {
+		msg = "<@" + user + "> " + msg
+	}
+
+	rtm.SendMessage(rtm.NewOutgoingMessage(msg, channel))
 }
