@@ -180,15 +180,25 @@ func respond(rtm *slack.RTM, msg *slack.MessageEvent, prefix string) {
 		send(response, msg.Channel, msg.User)
 
 	} else if turnStuffOff[text] {
-		response = "Terminating coffee supplies!"
+		response = ""
+		if state {
+			response = "Terminating coffee supplies!"
+			stateMutex.Lock()
+			impl.Off()
+			state = false
+			stateMutex.Unlock()
+		} else {
+			response = "How you pollutant-phobian treehugger suggest that we flip Off stuff that's already terminated?!"
+		}
 		send(response, msg.Channel, msg.User)
 
-		stateMutex.Lock()
-			impl.Off()
-		state = false
-		stateMutex.Unlock()
-
-	} else if randomResponses[text] == "juice usage?" {
+	} else if text == "something brewing?" {
+		if (state) {
+			send("You bet sailor!", msg.Channel, msg.User)
+		} else {
+			send("Nay nay nay! Sorry to disappoint ya seaman", msg.Channel, msg.User)
+		}
+	} else if text == "juice usage?" {
 		energy := impl.Consumption()
 		juice := "Could not read juice level :pensive:"
 		if energy >= 0 {
