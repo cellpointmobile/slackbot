@@ -55,8 +55,7 @@ func login() HNAPCredentials {
 
 func getHnapAuth(soapAction string, privateKey string) string {
 	time_stamp := time.Now().Unix()
-	hmacG := hmacGenerate(privateKey, string(time_stamp) + soapAction) + " " + string(time_stamp);
-	return hmacG
+	return hmacGenerate(privateKey, string(time_stamp) + soapAction) + " " + string(time_stamp);
 }
 
 func hmacGenerate(key string, data string) string {
@@ -113,8 +112,6 @@ func request(soapAction string, soapBody string, credentials HNAPCredentials) (d
 	// For all methods, except for login, we need an active session
 	// TODO : Improve such that we don't have to login everytime
 	if len(credentials.challenge) > 0 {
-		println("sending stuff")
-
 		hnapAuth := getHnapAuth("\"" + HNAP1_XMLNS + soapAction + "\"", credentials.privateKey)
 		req.Header.Add("HNAP_AUTH", hnapAuth)
 		req.Header.Add("Cookie", "uid=" + credentials.cookie)

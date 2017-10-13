@@ -1,8 +1,6 @@
 package power
 
 import (
-	_ "net/http"
-	_ "os"
 	"fmt"
 	"../hnap"
 )
@@ -30,4 +28,3 @@ func (control HNAP) Consumption() float64 {
 	fmt.Println("HNAP consumption event fired")
 	return hnap.Consumption()
 }
-
