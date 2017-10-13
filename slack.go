@@ -22,6 +22,7 @@ var
 	channel string = "C7GNULHMK"
 	state bool
 	stateMutex sync.Mutex
+	inProgressMsg = [4]string{"Still brewing..", "Just a few more jiffies..", "Control your caffeine urge! I'm not done yet..", "ZzzZzzZ! Slowly pressing the brown juice.."}
 )
 
 func main() {
@@ -122,8 +123,6 @@ func brew_coffee(rtm *slack.RTM, msg *slack.MessageEvent) {
 
 	time.Sleep(3 * time.Second)
 
-	inProgressMsg := [4]string{"Still brewing..", "Just a few more jiffies..", "Control your caffeine urge! I'm not done yet..", "ZzzZzzZ! Slowly pressing the brown juice.."}
-
 	Loop:
 		for {
 			if impl.Consumption() >= 100 {
@@ -167,9 +166,17 @@ func respond(rtm *slack.RTM, msg *slack.MessageEvent, prefix string) {
 	impl := new (power.HNAP)
 
 	if turnStuffOn[text] {
-		response := "okay okay, relax dude.."
+		response := ""
+		if state == false {
+			response = "okay okay, relax dude.."
+			go brew_coffee(rtm, msg)
+		} else if (impl.Consumption() >= 100) {
+			response = inProgressMsg[rand.Intn(4)]
+		} else {
+			response = "Pffff.. Yesterdays news ya landlobber! How about drinking what's already in da pot?!"
+		}
 		rtm.SendMessage(rtm.NewOutgoingMessage(response, msg.Channel))
-		go brew_coffee(rtm, msg)
+
 	} else if turnStuffOff[text] {
 		response = "Terminating coffee supplies!"
 		rtm.SendMessage(rtm.NewOutgoingMessage(response, msg.Channel))
