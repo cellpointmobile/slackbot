@@ -11,9 +11,17 @@ import (
 	"time"
 	"github.com/op/go-logging"
 	"./botlogging"
+	"sync"
 )
 
-var log = logging.MustGetLogger("")
+var
+(
+	log = logging.MustGetLogger("")
+	rtm *slack.RTM
+	channel string = "C7GNULHMK"
+	state bool
+	stateMutex sync.Mutex
+)
 
 func main() {
 
@@ -25,16 +33,24 @@ func main() {
 	}
 
 	token := os.Getenv("SLACK_TOKEN")
-	if os.Getenv("SLACK_CHANNEL") == "" {
-		os.Setenv("SLACK_CHANNEL", "#hackerdaysdk")
+	if len(token) < 1  {
+		log.Fatal("Please set environment variable SLACK_TOKEN")
 	}
+	setChannel := os.Getenv("SLACK_CHANNEL")
+	if len(setChannel) > 0  {
+		channel = setChannel
+	} else {
+		log.Debug("SLACK_CHANNEL not set in environment, using default: " + channel)
+	}
+
+	api := slack.New(token)
+	rtm = api.NewRTM()
+
 	go coffee_thread()
-	slack_thread(token)
+	slack_thread()
 }
 
-func slack_thread(token string) {
-	api := slack.New(token)
-	rtm := api.NewRTM()
+func slack_thread() {
 	go rtm.ManageConnection()
 
 Loop:
@@ -72,20 +88,36 @@ Loop:
 func coffee_thread() {
 	// get initial status
 	impl := new (power.HNAP)
-	state := impl.State()
+	state = impl.State()
 
 	for {
 		time.Sleep(3 * time.Second)
-		if state != impl.State() {
-			log.Debug("State changed to: " + strconv.FormatBool(impl.State()))
+		stateMutex.Lock()
+		newState := impl.State()
+		if state != newState {
+
+			msg := ""
+			if newState {
+				msg = "Let there be brew! Some marvellous angel decided to cook a batch of heavenly caffeine for us"
+			} else {
+				msg = "Dang! One naughty soul foiled our brewing plot"
+			}
+
+			rtm.SendMessage(rtm.NewOutgoingMessage(msg, channel))
+			state = newState
 		}
+		stateMutex.Unlock()
 	}
 }
 
 func brew_coffee(rtm *slack.RTM, msg *slack.MessageEvent) {
 	var response string
 	impl := new (power.HNAP)
-	impl.On()
+
+	stateMutex.Lock()
+		impl.On()
+	state = true
+	stateMutex.Unlock()
 
 	Loop:
 		for {
@@ -134,7 +166,12 @@ func respond(rtm *slack.RTM, msg *slack.MessageEvent, prefix string) {
 	} else if turnStuffOff[text] {
 		response = "Terminating coffee supplies!"
 		rtm.SendMessage(rtm.NewOutgoingMessage(response, msg.Channel))
-		impl.Off()
+
+		stateMutex.Lock()
+			impl.Off()
+		state = false
+		stateMutex.Unlock()
+
 	} else if randomResponses[text] != "juice usage?" {
 		energy := impl.Consumption()
 		juice := "Could not read juice level :("
