@@ -119,19 +119,18 @@ func brew_coffee(rtm *slack.RTM, msg *slack.MessageEvent) {
 	state = true
 	stateMutex.Unlock()
 
-	time.Sleep(3 * time.Second)
-
 	Loop:
 		for {
+			time.Sleep(30 * time.Second)
+
 			if impl.Consumption() >= 100 {
 				response = "Still brewing.."
 			} else {
-				response = "Brew completed! :coffee::tada:"
+				response = "Brew completed! :coffee: :tada:"
 				break Loop
 			}
 			log.Debug("Sending message: " + response + " to channel: " + msg.Channel)
 			rtm.SendMessage(rtm.NewOutgoingMessage(response, msg.Channel))
-			time.Sleep(30 * time.Second)
 		}
 
 	rtm.SendMessage(rtm.NewOutgoingMessage(response, msg.Channel))
@@ -148,11 +147,14 @@ func respond(rtm *slack.RTM, msg *slack.MessageEvent, prefix string) {
 		"coffee aye?": true,
 		"coffee now!": true,
 		"i'm dying here": true,
+		"coffee please": true,
+		"caffeine running low": true,
 		"on": true,
 	}
 	turnStuffOff := map[string]bool{
 		"please stop": true,
-		"ditch the black liquid": true,
+		"caffeine overflow": true,
+		"i'm chuck norris": true,
 		"off": true,
 	}
 
@@ -178,7 +180,7 @@ func respond(rtm *slack.RTM, msg *slack.MessageEvent, prefix string) {
 
 	} else if randomResponses[text] != "juice usage?" {
 		energy := impl.Consumption()
-		juice := "Could not read juice level :("
+		juice := "Could not read juice level :pensive:"
 		if energy >= 0 {
 			juice = strconv.FormatFloat(energy, 'f', 2, 64) + " watts"
 		}
