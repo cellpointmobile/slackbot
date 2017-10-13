@@ -12,6 +12,7 @@ import (
 	"github.com/op/go-logging"
 	"./botlogging"
 	"sync"
+	"math/rand"
 )
 
 var
@@ -121,10 +122,12 @@ func brew_coffee(rtm *slack.RTM, msg *slack.MessageEvent) {
 
 	time.Sleep(3 * time.Second)
 
+	inProgressMsg := [4]string{"Still brewing..", "Just a few more jiffies..", "Control your caffeine urge! I'm not done yet..", "ZzzZzzZ! Slowly pressing the brown juice.."}
+
 	Loop:
 		for {
 			if impl.Consumption() >= 100 {
-				response = "Still brewing.."
+				response = inProgressMsg[rand.Intn(4)]
 			} else {
 				response = "Brew completed! :coffee::tada:"
 				break Loop
