@@ -9,9 +9,21 @@ import (
 	"os"
 	"strconv"
 	"time"
+	"github.com/op/go-logging"
+	"./botlogging"
 )
 
+var log = logging.MustGetLogger("")
+
 func main() {
+
+	level, err := logging.LogLevel(os.Getenv("LOG_LEVEL") )
+	if err == nil {
+		botlogging.SetupLogging(level)
+	} else {
+		botlogging.SetupLogging(logging.WARNING)
+	}
+
 	token := os.Getenv("SLACK_TOKEN")
 	if os.Getenv("SLACK_CHANNEL") == "" {
 		os.Setenv("SLACK_CHANNEL", "#hackerdaysdk")
@@ -29,13 +41,13 @@ Loop:
 	for {
 		select {
 		case msg := <-rtm.IncomingEvents:
-			fmt.Print("Event Received: ")
+			log.Debug("Event Received: " + string(msg.Data) )
 			switch ev := msg.Data.(type) {
 			case *slack.ConnectedEvent:
-				fmt.Println("Connection counter:", ev.ConnectionCount)
+				log.Info("Connection counter:", ev.ConnectionCount)
 
 			case *slack.MessageEvent:
-				fmt.Printf("Message: %v\n", ev)
+				log.Info("Message: %v\n", ev)
 				info := rtm.GetInfo()
 				prefix := fmt.Sprintf("<@%s> ", info.User.ID)
 
@@ -44,10 +56,10 @@ Loop:
 				}
 
 			case *slack.RTMError:
-				fmt.Printf("Error: %s\n", ev.Error())
+				log.Error(fmt.Sprintf("Error: %s\n", ev.Error()))
 
 			case *slack.InvalidAuthEvent:
-				fmt.Printf("Invalid credentials")
+				log.Error("Invalid credentials")
 				break Loop
 
 			default:
@@ -65,7 +77,7 @@ func coffee_thread() {
 	for {
 		time.Sleep(3 * time.Second)
 		if state != impl.State() {
-			fmt.Print("State changed to: " + strconv.FormatBool(impl.State()))
+			log.Debug("State changed to: " + strconv.FormatBool(impl.State()))
 		}
 	}
 }
@@ -83,6 +95,7 @@ func brew_coffee(rtm *slack.RTM, msg *slack.MessageEvent) {
 				response = "Brew completed!"
 				break Loop
 			}
+			log.Debug("Sending message: " + response + " to channel: " + msg.Channel)
 			rtm.SendMessage(rtm.NewOutgoingMessage(response, msg.Channel))
 			time.Sleep(30 * time.Second)
 		}
